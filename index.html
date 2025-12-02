@@ -292,6 +292,36 @@
             padding: 20px;
             border: 2px solid var(--neon-green);
         }
+
+        /* Success Animation */
+        .flash-success {
+            animation: flashGreen 0.5s ease-out;
+        }
+
+        @keyframes flashGreen {
+            0% { 
+                background-color: rgba(0, 255, 102, 0.4); 
+                box-shadow: 0 0 50px var(--neon-green);
+                border-color: var(--neon-green);
+            }
+            100% { 
+                background-color: var(--ui-bg); 
+                box-shadow: 0 0 15px var(--neon-blue);
+                border-color: var(--neon-blue);
+            }
+        }
+
+        .score-pop {
+            animation: scorePop 0.3s ease-out;
+            color: #fff !important;
+            text-shadow: 0 0 10px #fff;
+        }
+
+        @keyframes scorePop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -423,6 +453,57 @@
     </div>
 
     <script>
+        // --- AUDIO SYSTEM ---
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+
+            if (type === 'correct') {
+                // Happy "Ping" - Sine wave ramping up freq
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(500, now);
+                osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
+                
+                // Volume envelope (fade out)
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'wrong') {
+                // Sad "Buzz" - Sawtooth wave ramping down
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(50, now + 0.4);
+                
+                // Volume envelope
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+        }
+
         // --- GAME DATA ---
         const questions = [
             // SAFETY FIRST
@@ -676,11 +757,10 @@
         const upgRadar = document.getElementById('upg-radar');
         const upgCrown = document.getElementById('upg-crown');
 
-        // --- AUDIO (Simulated via visual feedback only for compatibility) ---
-
         // --- GAME LOGIC ---
 
         function startGame() {
+            initAudio(); // Initialize audio on user interaction
             startScreen.style.display = 'none';
             gameContainer.style.display = 'flex';
             resetGameState();
@@ -748,12 +828,18 @@
             
             if (selectedIndex === q.a) {
                 // Correct
+                playSound('correct');
+                triggerCorrectAnimation();
+                
                 currentState.score += 100;
                 checkUpgrades();
                 currentState.qIndex++;
-                loadQuestion();
+                
+                // Delay next question slightly to show animation
+                setTimeout(loadQuestion, 600);
             } else {
                 // Wrong
+                playSound('wrong');
                 currentState.lives--;
                 updateShipDamage();
                 updateHUD();
@@ -766,6 +852,19 @@
                     showExplanation(q.exp, false);
                 }
             }
+        }
+
+        function triggerCorrectAnimation() {
+            // Flash the panel
+            const panel = document.querySelector('.comms-panel');
+            panel.classList.remove('flash-success'); // reset
+            void panel.offsetWidth; // trigger reflow
+            panel.classList.add('flash-success');
+
+            // Pop the score
+            scoreDisplay.classList.remove('score-pop');
+            void scoreDisplay.offsetWidth;
+            scoreDisplay.classList.add('score-pop');
         }
 
         function updateShipDamage() {
