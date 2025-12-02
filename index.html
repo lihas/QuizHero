@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Safety Cadet</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@500;700&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-red: #ff0055;
+            --neon-green: #00ff66;
+            --neon-gold: #ffd700;
+            --bg-dark: #050b14;
+            --ui-bg: rgba(10, 20, 40, 0.9);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none;
+        }
+
+        /* Moving Starfield */
+        .starfield {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 50px 160px, #fff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 90px 40px, #fff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            animation: moveStars 10s linear infinite;
+        }
+
+        @keyframes moveStars {
+            from { background-position: 0 0; }
+            to { background-position: 0 200px; }
+        }
+
+        /* UI Containers */
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Top HUD */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
+            border-bottom: 2px solid var(--neon-blue);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            text-shadow: 0 0 5px var(--neon-blue);
+        }
+
+        .life-bar {
+            color: var(--neon-red);
+        }
+
+        .score-board {
+            color: var(--neon-gold);
+        }
+
+        /* Main Game Area */
+        .main-stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Spaceship Container */
+        .ship-container {
+            width: 250px;
+            height: 250px;
+            position: relative;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.3));
+        }
+
+        /* Question Panel */
+        .comms-panel {
+            width: 90%;
+            background: var(--ui-bg);
+            border: 2px solid var(--neon-blue);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px var(--neon-blue);
+            backdrop-filter: blur(5px);
+            z-index: 10;
+        }
+
+        .section-tag {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 10px;
+            color: var(--neon-gold);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--neon-blue);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1.1rem;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            background: var(--neon-blue);
+            color: black;
+            transform: translateX(10px);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border: 2px solid var(--neon-red);
+            padding: 30px;
+            width: 85%;
+            max-width: 500px;
+            text-align: center;
+            border-radius: 10px;
+            box-shadow: 0 0 30px var(--neon-red);
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .modal-title {
+            color: var(--neon-red);
+            font-family: 'Press Start 2P';
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .modal-text {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .continue-btn {
+            background: var(--neon-green);
+            color: black;
+            border: none;
+            padding: 10px 25px;
+            font-family: 'Press Start 2P';
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        /* SVG Styles */
+        .ship-part { transition: opacity 0.3s; }
+        .ship-upgrade { display: none; } /* Hidden by default */
+        .hidden { opacity: 0; }
+        
+        .start-screen, .end-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-dark);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .title-hero {
+            font-family: 'Press Start 2P';
+            color: var(--neon-blue);
+            font-size: 2rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            text-shadow: 4px 4px var(--neon-red);
+        }
+
+        .start-btn {
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            background: transparent;
+            color: var(--neon-gold);
+            border: 4px solid var(--neon-gold);
+            font-family: 'Press Start 2P';
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .start-btn:hover {
+            background: var(--neon-gold);
+            color: black;
+            box-shadow: 0 0 20px var(--neon-gold);
+        }
+
+        /* Mobile specific */
+        @media (max-width: 600px) {
+            .ship-container { width: 180px; height: 180px; }
+            .question-text { font-size: 1.1rem; }
+            .option-btn { font-size: 0.9rem; padding: 10px; }
+            .title-hero { font-size: 1.5rem; }
+        }
+
+        /* Upgrade Notifications */
+        .upgrade-toast {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--neon-green);
+            font-family: 'Press Start 2P';
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px var(--neon-green);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 200;
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border: 2px solid var(--neon-green);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="starfield"></div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="start-screen">
+        <h1 class="title-hero">COSMIC<br>SAFETY<br>CADET</h1>
+        <p style="margin-bottom: 30px; font-size: 1.2rem; max-width: 600px; padding: 0 20px;">
+            Pilot the Star-Vanguard through the Nebula of Knowledge. <br><br>
+            Answer correctly to UPGRADE your ship.<br>
+            Wrong answers damage your hull.<br>
+            <strong>3 Strikes and it's GAME OVER.</strong>
+        </p>
+        <button class="start-btn" onclick="startGame()">LAUNCH MISSION</button>
+    </div>
+
+    <!-- End Screen -->
+    <div id="end-screen" class="end-screen" style="display: none;">
+        <h1 id="end-title" class="title-hero">GAME OVER</h1>
+        <p id="end-score" style="margin-bottom: 30px; font-size: 1.2rem;">Score: 0</p>
+        <button class="start-btn" onclick="resetGame()">RETRY MISSION</button>
+    </div>
+
+    <!-- Gameplay UI -->
+    <div id="game-container" style="display: none;">
+        
+        <!-- HUD -->
+        <div class="hud">
+            <div>HULL: <span id="hull-display" class="life-bar">❤❤❤</span></div>
+            <div>SECTOR: <span id="q-num">1</span>/35</div>
+            <div>SCORE: <span id="score-display">0</span></div>
+        </div>
+
+        <div class="main-stage">
+            
+            <!-- Upgrade Toast -->
+            <div id="upgrade-toast" class="upgrade-toast">
+                SHIP UPGRADE!<br>SYSTEM INSTALLED
+            </div>
+
+            <!-- The Spaceship (SVG) -->
+            <div class="ship-container">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#2b323c;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#8a9bb8;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#2b323c;stop-opacity:1" />
+                        </linearGradient>
+                        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                    </defs>
+
+                    <!-- Engine Flame (Always there unless dead) -->
+                    <path d="M90 160 L100 190 L110 160 Z" fill="#00f3ff" opacity="0.8" filter="url(#glow)">
+                        <animate attributeName="d" values="M90 160 L100 190 L110 160 Z; M90 160 L100 180 L110 160 Z; M90 160 L100 190 L110 160 Z" dur="0.2s" repeatCount="indefinite" />
+                    </path>
+
+                    <!-- Part 3: Left Wing -->
+                    <g id="ship-left-wing" class="ship-part">
+                        <path d="M40 120 L80 100 L80 150 L40 120 Z" fill="url(#metal)" stroke="#00f3ff" stroke-width="2"/>
+                        <rect x="35" y="115" width="5" height="20" fill="#00f3ff" filter="url(#glow)"/>
+                    </g>
+
+                    <!-- Part 2: Right Wing -->
+                    <g id="ship-right-wing" class="ship-part">
+                        <path d="M160 120 L120 100 L120 150 L160 120 Z" fill="url(#metal)" stroke="#00f3ff" stroke-width="2"/>
+                        <rect x="160" y="115" width="5" height="20" fill="#00f3ff" filter="url(#glow)"/>
+                    </g>
+
+                    <!-- Part 1: Main Body (Hull) -->
+                    <g id="ship-body" class="ship-part">
+                        <path d="M100 20 L70 150 L130 150 Z" fill="url(#metal)" stroke="#fff" stroke-width="2"/>
+                        <!-- Cockpit -->
+                        <ellipse cx="100" cy="80" rx="10" ry="20" fill="#222" stroke="#00f3ff" stroke-width="1"/>
+                    </g>
+
+                    <!-- Upgrade: Armor (Level 1) -->
+                    <g id="upg-armor" class="ship-upgrade">
+                        <path d="M70 100 L100 50 L130 100" fill="none" stroke="#ff0055" stroke-width="3" filter="url(#glow)"/>
+                        <circle cx="100" cy="100" r="5" fill="#ff0055" />
+                    </g>
+
+                    <!-- Upgrade: Guns (Level 2) -->
+                    <g id="upg-guns" class="ship-upgrade">
+                        <rect x="25" y="100" width="10" height="40" fill="#00ff66" filter="url(#glow)"/>
+                        <rect x="165" y="100" width="10" height="40" fill="#00ff66" filter="url(#glow)"/>
+                    </g>
+
+                    <!-- Upgrade: Staff/Radar (Level 3) -->
+                    <g id="upg-radar" class="ship-upgrade">
+                        <circle cx="100" cy="150" r="25" stroke="#ffd700" stroke-width="2" fill="none" opacity="0.6">
+                            <animate attributeName="r" values="25; 35; 25" dur="2s" repeatCount="indefinite" />
+                            <animate attributeName="opacity" values="0.6; 0; 0.6" dur="2s" repeatCount="indefinite" />
+                        </circle>
+                    </g>
+                    
+                     <!-- Upgrade: Crown/Master (Level 4) -->
+                    <g id="upg-crown" class="ship-upgrade">
+                        <path d="M100 10 L90 30 L110 30 Z" fill="#ffd700" filter="url(#glow)" />
+                    </g>
+
+                </svg>
+            </div>
+        </div>
+
+        <!-- Question Section -->
+        <div class="comms-panel">
+            <div class="section-tag" id="section-tag">SECTION A — SAFETY FIRST</div>
+            <div class="question-text" id="question-text">Loading Data...</div>
+            <div class="options-grid" id="options-container">
+                <!-- Options injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Modal (Wrong Answer) -->
+    <div class="modal-overlay" id="fail-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">⚠ CRITICAL FAILURE ⚠</h2>
+            <div style="font-size: 3rem; margin-bottom: 20px;">💥</div>
+            <p class="modal-text" id="explanation-text">Explanation goes here.</p>
+            <button class="continue-btn" onclick="nextQuestion()">REPAIR & CONTINUE</button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME DATA ---
+        const questions = [
+            // SAFETY FIRST
+            {
+                q: "Riya sees a wire sparking near a computer. What should she do FIRST?",
+                options: ["Pull it out quickly", "Pour water to cool it", "Switch off the main power & tell an adult", "Touch it with cloth"],
+                a: 2,
+                exp: "Electricity is like a very fast, hot river inside the wire. If you touch it or pour water (which conducts electricity), it will hurt you bad! Turning off the main power stops the river safely."
+            },
+            {
+                q: "Why should medicines never be kept in the refrigerator door where children can reach?",
+                options: ["They expire faster", "Children may mistake them for food", "They taste better when cold", "Refrigerator vibrates"],
+                a: 1,
+                exp: "Colourful pills look just like candy to small kids! If they eat them thinking it's chocolate, they can get very sick."
+            },
+            {
+                q: "Which action is safe even if you are alone at home?",
+                options: ["Lighting a candle", "Using a microwave", "Playing with a Swiss knife", "Touching a switch with wet hands"],
+                a: 1,
+                exp: "Microwaves are generally safe to use for heating food. Candles can start fires, knives cause cuts, and wet hands on switches can give you a nasty shock!"
+            },
+            {
+                q: "A child falls and gets a deep cut. What is the correct order?",
+                options: ["Wash -> Clean Cloth -> Press", "Clean Cloth -> Wash -> Press", "Press to stop bleeding -> Wash -> Cloth", "Wash -> Press -> Cloth"],
+                a: 3, // d in list is 2->4->1. Logic: 1.Wash(2) 2.Press(4) 3.Cloth(1). Actually standard first aid: Press first if bleeding heavily, but for school MCQs usually Wash -> Press -> Bandage. Let's map to options provided: a)2-1-4 b)1-2-4 c)4-2-1 d)2-4-1. Correct is Wash(2), Press(4), Cloth(1).
+                exp: "First, wash the dirt away so germs don't get in. Second, press it to stop the blood. Third, cover it with a clean cloth to keep it safe!"
+            },
+            {
+                q: "Which situation is MOST unsafe even if it looks harmless?",
+                options: ["Standing near a cupboard", "Sitting near a heater with loose clothes", "Walking on a dry terrace", "Drawing with crayons"],
+                a: 1,
+                exp: "Loose clothes can flutter and touch the hot heater without you noticing, catching fire instantly! Always wear fitted clothes near heat."
+            },
+            {
+                q: "A ball goes under a parked car. What should a child do?",
+                options: ["Crawl under the car", "Wait for an adult", "Shake the car", "Ask another child to help"],
+                a: 1,
+                exp: "The driver might not see you and could start the car! Never crawl under vehicles. Ask an adult to get it safely."
+            },
+            {
+                q: "Why should we not run on stairs even if no one is around?",
+                options: ["It creates noise", "It wastes energy", "Loss of balance happens quickly", "It shakes the building"],
+                a: 2,
+                exp: "Gravity pulls you down fast! If you trip on stairs, you fall much harder than on flat ground, leading to broken bones."
+            },
+            {
+                q: "A child sees smoke in the kitchen. The safest action is—",
+                options: ["Search for source", "Turn on the fan", "Inform adult & leave area", "Pour water on everything"],
+                a: 2,
+                exp: "Smoke means fire, and fire spreads fast! Don't be a hero—get out and get help. Fans just feed the fire more oxygen."
+            },
+            {
+                q: "Which of these is a correct reason for using a helmet?",
+                options: ["Avoid police fine", "Look stylish", "Protect head from impact", "Avoid dust only"],
+                a: 2,
+                exp: "Your brain is soft like jelly inside your hard skull. A helmet acts like extra armor to stop your skull from cracking if you fall."
+            },
+            {
+                q: "A bottle says “Flammable”. What does it mean?",
+                options: ["It melts when heated", "It catches fire easily", "It becomes cold when opened", "Nothing special"],
+                a: 1,
+                exp: "Flammable comes from 'Flame'. It means the stuff inside loves to catch fire. Keep it far away from matches or heat!"
+            },
+            // AIR WATER WEATHER
+            {
+                q: "Why does a balloon shrink when kept in the fridge?",
+                options: ["Cold air escapes", "Air inside contracts", "Air disappears", "Rubber becomes stronger"],
+                a: 1,
+                exp: "Air is made of tiny invisible particles moving around. When they get cold, they huddle together to stay warm, taking up less space!"
+            },
+            {
+                q: "Which statement about air is TRUE?",
+                options: ["Air has no weight", "Air has no uses", "Air takes up space", "Air is visible in sunlight"],
+                a: 2,
+                exp: "Blow into a balloon—it gets bigger, right? That's because air is crowding inside. It needs space to sit!"
+            },
+            {
+                q: "Wet clothes dry faster on a windy day because—",
+                options: ["Wind blows water away", "Wind increases evaporation", "Wind makes clothes warmer", "Wind removes dust"],
+                a: 1,
+                exp: "Wind acts like a broom, sweeping the water vapor away from the clothes quickly, making room for more water to turn into gas."
+            },
+            {
+                q: "Why do clouds appear white even though water is transparent?",
+                options: ["Sunlight scatters in droplets", "Clouds are painted white", "Water becomes white in sky", "They reflect mountains"],
+                a: 0,
+                exp: "Sunlight is actually a mix of all colors (rainbow). When it hits the water droplets in clouds, all the colors bounce around and mix back up into white!"
+            },
+            {
+                q: "Which of these is NOT part of the water cycle?",
+                options: ["Evaporation", "Condensation", "Melting of ice cream", "Rainfall"],
+                a: 2,
+                exp: "The Water Cycle is nature's way of recycling water (Ocean -> Sky -> Rain). Ice cream melting is just a sad tragedy, not part of nature's cycle!"
+            },
+            {
+                q: "A cold drink bottle shows water droplets outside. This is because—",
+                options: ["Water leaked", "Water in air condensed", "The bottle is sweating", "Ice melting outside"],
+                a: 1,
+                exp: "There is invisible water gas in the air. When it hits the cold bottle, it turns back into liquid water—just like steam turns to water on a cool lid."
+            },
+            {
+                q: "Which activity wastes the LEAST water?",
+                options: ["Washing car with hose", "Shower for 20 mins", "Using bucket for bath", "Open tap while brushing"],
+                a: 2,
+                exp: "A shower or hose keeps pouring water even when you don't need it. A bucket has a fixed amount, so you know exactly how much you use!"
+            },
+            {
+                q: "Which day will feel the MOST humid?",
+                options: ["Hot + windy", "Cool + dry", "Hot + full of moisture", "Cold + snowy"],
+                a: 2,
+                exp: "Humidity is how much water gas is in the air. Hot air can hold a lot of water, making you feel sticky and sweaty."
+            },
+            {
+                q: "Why does water in ponds not run out even though it evaporates?",
+                options: ["Sunlight stops", "Refilled by rain/groundwater", "Birds refill it", "Water cycle stops"],
+                a: 1,
+                exp: "It's a balance! The sun takes water up (evaporation), but rain and underground rivers put it back in."
+            },
+            {
+                q: "Which is the BEST example of weather change?",
+                options: ["Tree growing", "Sweater today, not yesterday", "Earth rotating", "City becoming greener"],
+                a: 1,
+                exp: "Weather is what happens right now or today. Climate is long term. Wearing a sweater today means the weather changed from hot to cold just for now."
+            },
+            // MIXED
+            {
+                q: "Why does a metal spoon in boiling water become hot?",
+                options: ["Metal absorbs heat", "Water climbs spoon", "Spoon produces heat", "Steam sticks to spoon"],
+                a: 0,
+                exp: "Metal loves to share heat! It grabs the heat from the water and passes it up the handle to your fingers. This is called Conduction."
+            },
+            {
+                q: "During winter, clothes dry slowly because—",
+                options: ["Water freezes", "Evaporation is slower", "Wind stops", "Clothes absorb air"],
+                a: 1,
+                exp: "Heat helps water turn into gas (evaporate). In winter, there is less heat, so the water stays liquid on the clothes for longer."
+            },
+            {
+                q: "Which is the safest way to check if an iron is hot?",
+                options: ["Touch with wet finger", "Bring hand close (don't touch)", "Touch metal quickly", "Put paper on it"],
+                a: 1,
+                exp: "Your skin can feel heat radiating without touching! Like feeling the sun on your face. Never touch hot metal directly."
+            },
+            {
+                q: "Why does fog form early morning in winter?",
+                options: ["Clouds fall down", "Vapour condenses near ground", "Smoke mixes with air", "Dew turns white"],
+                a: 1,
+                exp: "Fog is just a cloud that decided to sit on the ground! The cold morning air turns invisible water gas into tiny floating droplets."
+            },
+            {
+                q: "Why should a plastic bag NOT be put over a fan to dry?",
+                options: ["It dries faster", "Might get sucked in", "Plastic becomes cold", "Fan stops working"],
+                a: 1,
+                exp: "Fans pull air in from the back. A light plastic bag can get sucked into the motor, jam it, and cause a spark or fire!"
+            },
+            {
+                q: "Which of these prevents both accidents and illnesses?",
+                options: ["Drinking unclean water", "Washing hands", "Leaving food uncovered", "Playing in mud"],
+                a: 1,
+                exp: "Washing hands stops germs (illness) and if your hands are not greasy, you won't drop things (accidents)! Okay, mostly illness, but it's the best habit here."
+            },
+            {
+                q: "After rain, the air feels fresher because—",
+                options: ["Rain washes dust away", "Air becomes heavier", "Clouds disappear", "Wind stops"],
+                a: 0,
+                exp: "Rain drops act like a shower for the sky! They grab all the floating dust and pollen and bring them down to the ground."
+            },
+            {
+                q: "Which one shows evaporation the BEST?",
+                options: ["Clothes drying", "Melting ice", "Steam to droplets", "Water freezing"],
+                a: 0,
+                exp: "Evaporation is Liquid -> Gas. Wet clothes become dry because the water turns into gas and flies away!"
+            },
+            {
+                q: "Which situation uses science + safety both?",
+                options: ["Standing near steam", "Testing hot water with elbow", "Candle near aerosol", "Fridge open long time"],
+                a: 1,
+                exp: "Your elbow skin is sensitive but tough. Using it to check temperature prevents burning your baby brother or yourself in a bath!"
+            },
+            {
+                q: "In a closed room, a burning candle suddenly goes out. Why?",
+                options: ["Candle got bored", "Oxygen reduced", "Wax became shy", "Flame decided to rest"],
+                a: 1,
+                exp: "Fire needs to breathe Oxygen just like us! In a closed room, once the fire eats all the oxygen, it starves and dies out."
+            },
+            // HARD
+            {
+                q: "Which change cannot be reversed easily?",
+                options: ["Wet clothes -> dry", "Water -> vapour", "Burning paper", "Cooling hot tea"],
+                a: 2,
+                exp: "Once paper turns to ash and smoke, you can't glue the ash back into paper. It's a Chemical Change!"
+            },
+            {
+                q: "Why do we feel cooler when sweat dries?",
+                options: ["Sweat is cold", "Evaporation removes heat", "Wind produces cold", "Body is lighter"],
+                a: 1,
+                exp: "To turn sweat into gas, the water needs energy. It steals that energy (heat) from your skin, leaving you feeling cool!"
+            },
+            {
+                q: "Why are stormy days dangerous?",
+                options: ["Too much wind", "Objects can fly & hit", "Rain stops", "Trees get shorter"],
+                a: 1,
+                exp: "The wind itself isn't the problem, it's what the wind throws at you! Branches, signs, and roof tiles can become missiles."
+            },
+            {
+                q: "Leaving tap running while washing brushes is wrong because:",
+                options: ["Water gets colorful", "Wastes clean water", "Tap gets angry", "Paint dries slow"],
+                a: 1,
+                exp: "Clean water is precious! While you scrub the brush, gallons of good water go down the drain for no reason."
+            },
+            {
+                q: "Which is a sign of weather, not climate?",
+                options: ["Delhi hot summers", "Rained heavily at 2 PM", "Rajasthan dry usually", "Kashmir cold winters"],
+                a: 1,
+                exp: "Weather is a snapshot (Right now!). Climate is the whole photo album (Over many years). Rain at 2PM is just a snapshot."
+            }
+        ];
+
+        // --- GAME STATE ---
+        let currentState = {
+            qIndex: 0,
+            lives: 3,
+            score: 0,
+            activeUpgrades: 0
+        };
+
+        // --- DOM ELEMENTS ---
+        const startScreen = document.getElementById('start-screen');
+        const gameContainer = document.getElementById('game-container');
+        const endScreen = document.getElementById('end-screen');
+        
+        const qText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const sectionTag = document.getElementById('section-tag');
+        
+        const hullDisplay = document.getElementById('hull-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const qNum = document.getElementById('q-num');
+        
+        const failModal = document.getElementById('fail-modal');
+        const expText = document.getElementById('explanation-text');
+        const upgradeToast = document.getElementById('upgrade-toast');
+
+        // Ship Parts
+        const shipBody = document.getElementById('ship-body');
+        const shipLeft = document.getElementById('ship-left-wing');
+        const shipRight = document.getElementById('ship-right-wing');
+        
+        const upgArmor = document.getElementById('upg-armor');
+        const upgGuns = document.getElementById('upg-guns');
+        const upgRadar = document.getElementById('upg-radar');
+        const upgCrown = document.getElementById('upg-crown');
+
+        // --- AUDIO (Simulated via visual feedback only for compatibility) ---
+
+        // --- GAME LOGIC ---
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            gameContainer.style.display = 'flex';
+            resetGameState();
+            loadQuestion();
+        }
+
+        function resetGameState() {
+            currentState.qIndex = 0;
+            currentState.lives = 3;
+            currentState.score = 0;
+            currentState.activeUpgrades = 0;
+            updateHUD();
+            resetShipVisuals();
+        }
+
+        function resetShipVisuals() {
+            shipBody.style.opacity = 1;
+            shipLeft.style.opacity = 1;
+            shipRight.style.opacity = 1;
+            
+            upgArmor.style.display = 'none';
+            upgGuns.style.display = 'none';
+            upgRadar.style.display = 'none';
+            upgCrown.style.display = 'none';
+        }
+
+        function updateHUD() {
+            let hearts = "";
+            for(let i=0; i<currentState.lives; i++) hearts += "❤";
+            hullDisplay.innerText = hearts;
+            scoreDisplay.innerText = currentState.score;
+            qNum.innerText = currentState.qIndex + 1;
+        }
+
+        function loadQuestion() {
+            if (currentState.qIndex >= questions.length) {
+                endGame(true);
+                return;
+            }
+
+            const q = questions[currentState.qIndex];
+            
+            // Set Section Title based on index
+            if(currentState.qIndex < 10) sectionTag.innerText = "SECTOR A: SAFETY PROTOCOLS";
+            else if(currentState.qIndex < 20) sectionTag.innerText = "SECTOR B: ATMOSPHERICS";
+            else if(currentState.qIndex < 30) sectionTag.innerText = "SECTOR C: MIXED HAZARDS";
+            else sectionTag.innerText = "SECTOR D: DEEP SPACE LOGIC";
+
+            qText.innerText = q.q;
+            optionsContainer.innerHTML = "";
+
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('div');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(index);
+                optionsContainer.appendChild(btn);
+            });
+
+            updateHUD();
+        }
+
+        function handleAnswer(selectedIndex) {
+            const q = questions[currentState.qIndex];
+            
+            if (selectedIndex === q.a) {
+                // Correct
+                currentState.score += 100;
+                checkUpgrades();
+                currentState.qIndex++;
+                loadQuestion();
+            } else {
+                // Wrong
+                currentState.lives--;
+                updateShipDamage();
+                updateHUD();
+                
+                if (currentState.lives <= 0) {
+                    // Show explanation then die
+                    showExplanation(q.exp, true);
+                } else {
+                    // Show explanation then continue
+                    showExplanation(q.exp, false);
+                }
+            }
+        }
+
+        function updateShipDamage() {
+            // Shake effect
+            const ship = document.querySelector('.ship-container');
+            ship.style.transform = "rotate(15deg) scale(0.9)";
+            setTimeout(() => ship.style.transform = "rotate(0deg) scale(1)", 200);
+
+            if (currentState.lives === 2) {
+                shipLeft.style.opacity = 0.1; // Lose Left Wing
+            } else if (currentState.lives === 1) {
+                shipRight.style.opacity = 0.1; // Lose Right Wing
+            }
+        }
+
+        function checkUpgrades() {
+            // Logic: Upgrade every 8 questions roughly
+            const qDone = currentState.qIndex + 1;
+            
+            let newUpgrade = false;
+            
+            if (qDone === 5) {
+                upgArmor.style.display = 'block';
+                newUpgrade = true;
+            } else if (qDone === 15) {
+                upgGuns.style.display = 'block';
+                newUpgrade = true;
+            } else if (qDone === 25) {
+                upgRadar.style.display = 'block';
+                newUpgrade = true;
+            } else if (qDone === 32) {
+                upgCrown.style.display = 'block';
+                newUpgrade = true;
+            }
+
+            if (newUpgrade) {
+                upgradeToast.style.opacity = 1;
+                setTimeout(() => upgradeToast.style.opacity = 0, 2000);
+            }
+        }
+
+        function showExplanation(text, isFatal) {
+            expText.innerText = text;
+            failModal.style.display = 'flex';
+            
+            const btn = document.querySelector('.continue-btn');
+            if (isFatal) {
+                btn.innerText = "ABANDON SHIP (GAME OVER)";
+                btn.onclick = () => {
+                    failModal.style.display = 'none';
+                    endGame(false);
+                };
+            } else {
+                btn.innerText = "REPAIR & CONTINUE";
+                btn.onclick = nextQuestion;
+            }
+        }
+
+        function nextQuestion() {
+            failModal.style.display = 'none';
+            currentState.qIndex++;
+            loadQuestion();
+        }
+
+        function endGame(victory) {
+            gameContainer.style.display = 'none';
+            endScreen.style.display = 'flex';
+            const title = document.getElementById('end-title');
+            const score = document.getElementById('end-score');
+
+            if (victory) {
+                title.innerText = "MISSION ACCOMPLISHED";
+                title.style.color = "var(--neon-green)";
+                score.innerText = `Final Score: ${currentState.score} \n Rank: Galactic Guardian`;
+            } else {
+                title.innerText = "MISSION FAILED";
+                title.style.color = "var(--neon-red)";
+                score.innerText = `Final Score: ${currentState.score} \n Ship Destroyed in Sector ${currentState.qIndex + 1}`;
+            }
+        }
+
+        function resetGame() {
+            endScreen.style.display = 'none';
+            startGame();
+        }
+
+    </script>
+</body>
+</html>
